@@ -9,19 +9,6 @@ const addBookHandler = (request, h) => {
     name, year, author, summary, publisher, pageCount, readPage, reading,
   } = request.payload;
 
-  const id = nanoid(16);
-  const insertedAt = new Date().toISOString();
-  const updatedAt = insertedAt;
-  const finished = pageCount === readPage;
-
-  const newBook = {
-    id, name, year, author, summary, publisher, pageCount, readPage, finished, reading, insertedAt, updatedAt,
-  };
-
-  books.push(newBook);
-
-  const isSuccess = books.filter((book) => book.id === id).length > 0;
-
   if (!name) {
     const response = h.response({
       status: 'fail',
@@ -34,11 +21,24 @@ const addBookHandler = (request, h) => {
   if (readPage > pageCount) {
     const response = h.response({
       status: 'fail',
-      message: `Gagal menambahkan buku. ${readPage} tidak boleh lebih besar dari ${pageCount}`,
+      message: 'Gagal menambahkan buku. readPage tidak boleh lebih besar dari pageCount',
     });
     response.code(400);
     return response;
   }
+
+  const id = nanoid(16);
+  const insertedAt = new Date().toISOString();
+  const updatedAt = insertedAt;
+  const finished = pageCount === readPage;
+
+  const newBook = {
+    id, name, year, author, summary, publisher, pageCount, readPage, finished, reading, insertedAt, updatedAt,
+  };
+
+  books.push(newBook);
+
+  const isSuccess = books.filter((book) => book.id === id).length > 0;
 
   if (isSuccess) {
     const response = h.response({
@@ -61,12 +61,38 @@ const addBookHandler = (request, h) => {
 };
 
 // TODO meanmpilkan semua buku
-const getAllBooksHandler = () => ({
-  status: 'success',
-  data: {
-    books,
-  },
-});
+const getAllBooksHandler = (request, h) => {
+  const {
+    name, reading, finished,
+  } = request.query;
+
+  let dataBooks = books;
+
+  if (name !== undefined) {
+    dataBooks = dataBooks.filter((book) => book.name.toLowerCase().includes(name.toLowerCase()));
+  }
+
+  if (reading !== undefined) {
+    dataBooks = dataBooks.filter((book) => book.reading === (reading === '1'));
+  }
+
+  if (finished !== undefined) {
+    dataBooks = dataBooks.filter((book) => book.finished === (finished === '1'));
+  }
+
+  const response = h.response({
+    status: 'success',
+    data: {
+      books: dataBooks.map((book) => ({
+        id: book.id,
+        name: book.name,
+        publisher: book.publisher,
+      })),
+    },
+  });
+  response.code(200);
+  return response;
+};
 
 // TODO menampilkan detail buku
 const getBookByIdHandler = (request, h) => {
@@ -116,7 +142,7 @@ const editBookByIdHandler = (request, h) => {
   if (readPage > pageCount) {
     const response = h.response({
       status: 'fail',
-      message: 'Gagal menambahkan buku. readPage tidak boleh lebih besar dari pageCount',
+      message: 'Gagal memperbarui buku. readPage tidak boleh lebih besar dari pageCount',
     });
     response.code(400);
     return response;
@@ -129,7 +155,7 @@ const editBookByIdHandler = (request, h) => {
 
     const response = h.response({
       status: 'success',
-      message: 'Catatan berhasil diperbarui',
+      message: 'Buku berhasil diperbarui',
     });
     response.code(200);
     return response;
@@ -161,7 +187,7 @@ const deleteBookByIdHandler = (request, h) => {
 
   const response = h.response({
     status: 'fail',
-    mesage: 'Buku gagal dihapus. Id tidak ditemukan',
+    message: 'Buku gagal dihapus. Id tidak ditemukan',
   });
   response.code(404);
   return response;
